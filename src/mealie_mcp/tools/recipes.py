@@ -145,11 +145,27 @@ def register(mcp, get_client):
                     {"text": step} for step in instructions
                 ]
             if categories:
-                update_data["recipeCategory"] = [
-                    {"name": c} for c in categories
-                ]
+                all_cats = (await client.get_categories()).get("items", [])
+                cat_lookup = {c["name"].lower(): c for c in all_cats}
+                resolved_cats = []
+                for c in categories:
+                    match = cat_lookup.get(c.lower())
+                    if match:
+                        resolved_cats.append({"id": match["id"], "name": match["name"], "slug": match["slug"]})
+                    else:
+                        resolved_cats.append({"name": c})
+                update_data["recipeCategory"] = resolved_cats
             if tags:
-                update_data["tags"] = [{"name": t} for t in tags]
+                all_tags = (await client.get_tags()).get("items", [])
+                tag_lookup = {t["name"].lower(): t for t in all_tags}
+                resolved_tags = []
+                for t in tags:
+                    match = tag_lookup.get(t.lower())
+                    if match:
+                        resolved_tags.append({"id": match["id"], "name": match["name"], "slug": match["slug"]})
+                    else:
+                        resolved_tags.append({"name": t})
+                update_data["tags"] = resolved_tags
 
             if update_data:
                 await client.update_recipe(slug, update_data)
@@ -211,11 +227,27 @@ def register(mcp, get_client):
                     {"text": step} for step in instructions
                 ]
             if categories is not None:
-                update_data["recipeCategory"] = [
-                    {"name": c} for c in categories
-                ]
+                all_cats = (await client.get_categories()).get("items", [])
+                cat_lookup = {c["name"].lower(): c for c in all_cats}
+                resolved_cats = []
+                for c in categories:
+                    match = cat_lookup.get(c.lower())
+                    if match:
+                        resolved_cats.append({"id": match["id"], "name": match["name"], "slug": match["slug"]})
+                    else:
+                        resolved_cats.append({"name": c})
+                update_data["recipeCategory"] = resolved_cats
             if tags is not None:
-                update_data["tags"] = [{"name": t} for t in tags]
+                all_tags = (await client.get_tags()).get("items", [])
+                tag_lookup = {t["name"].lower(): t for t in all_tags}
+                resolved_tags = []
+                for t in tags:
+                    match = tag_lookup.get(t.lower())
+                    if match:
+                        resolved_tags.append({"id": match["id"], "name": match["name"], "slug": match["slug"]})
+                    else:
+                        resolved_tags.append({"name": t})
+                update_data["tags"] = resolved_tags
 
             if not update_data:
                 return "No fields to update. Provide at least one field to change."

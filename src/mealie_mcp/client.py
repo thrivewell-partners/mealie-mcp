@@ -74,9 +74,7 @@ class MealieClient:
         return await self._request("POST", "/api/recipes", json={"name": name})
 
     async def update_recipe(self, slug: str, data: dict) -> dict:
-        existing = await self.get_recipe(slug)
-        existing.update(data)
-        return await self._request("PUT", f"/api/recipes/{slug}", json=existing)
+        return await self._request("PATCH", f"/api/recipes/{slug}", json=data)
 
     async def delete_recipe(self, slug: str) -> None:
         await self._request("DELETE", f"/api/recipes/{slug}")

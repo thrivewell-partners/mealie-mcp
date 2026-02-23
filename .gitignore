@@ -8,3 +8,5 @@ build/
 *.egg
 .pytest_cache/
 .ruff_cache/
+.claude/settings.json
+.mcp.json
