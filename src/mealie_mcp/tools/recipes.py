@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 from fastmcp import Context
@@ -138,11 +139,12 @@ def register(mcp, get_client):
                 update_data["performTime"] = perform_time
             if ingredients:
                 update_data["recipeIngredient"] = [
-                    {"note": ing} for ing in ingredients
+                    {"note": ing, "referenceId": str(uuid.uuid4())} for ing in ingredients
                 ]
             if instructions:
                 update_data["recipeInstructions"] = [
-                    {"text": step} for step in instructions
+                    {"id": str(uuid.uuid4()), "title": "", "summary": "", "text": step, "ingredientReferences": []}
+                    for step in instructions
                 ]
             if categories:
                 all_cats = (await client.get_categories()).get("items", [])
@@ -220,11 +222,12 @@ def register(mcp, get_client):
                 update_data["performTime"] = perform_time
             if ingredients is not None:
                 update_data["recipeIngredient"] = [
-                    {"note": ing} for ing in ingredients
+                    {"note": ing, "referenceId": str(uuid.uuid4())} for ing in ingredients
                 ]
             if instructions is not None:
                 update_data["recipeInstructions"] = [
-                    {"text": step} for step in instructions
+                    {"id": str(uuid.uuid4()), "title": "", "summary": "", "text": step, "ingredientReferences": []}
+                    for step in instructions
                 ]
             if categories is not None:
                 all_cats = (await client.get_categories()).get("items", [])
