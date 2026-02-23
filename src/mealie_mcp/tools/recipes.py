@@ -13,6 +13,93 @@ from ..formatting import (
 )
 
 
+async def _resolve_ingredients(client: MealieClient, ingredients: list[dict]) -> list[dict]:
+    """Convert ingredient dicts to Mealie recipeIngredient format.
+
+    Each dict may have:
+        quantity (float | None): numeric amount
+        unit (str | None): unit name or abbreviation (e.g. "g", "cup", "tbsp")
+        food (str | None): ingredient name (e.g. "bread flour", "butter")
+        comment (str | None): extra info (e.g. "softened", "about 1¾ tsp")
+    """
+    # Build unit lookup (name, abbreviation, plural variants → unit object)
+    all_units = (await client.get_units()).get("items", [])
+    unit_lookup: dict[str, dict] = {}
+    for u in all_units:
+        for key in [
+            u.get("name", ""),
+            u.get("abbreviation", ""),
+            u.get("pluralName", ""),
+            u.get("pluralAbbreviation", ""),
+        ]:
+            if key:
+                unit_lookup[key.lower()] = u
+
+    result = []
+    for ing in ingredients:
+        item: dict[str, Any] = {"referenceId": str(uuid.uuid4()), "title": None}
+
+        # Quantity
+        qty = ing.get("quantity")
+        item["quantity"] = float(qty) if qty is not None else None
+
+        # Unit
+        unit_str = (ing.get("unit") or "").strip().lower()
+        if unit_str:
+            matched = unit_lookup.get(unit_str)
+            if matched:
+                item["unit"] = {
+                    "id": matched["id"],
+                    "name": matched["name"],
+                    "abbreviation": matched.get("abbreviation", ""),
+                }
+            else:
+                item["unit"] = None
+        else:
+            item["unit"] = None
+
+        # Food — search existing, create if not found
+        food_name = (ing.get("food") or "").strip()
+        if food_name:
+            foods = (await client.search_foods(food_name, per_page=10)).get("items", [])
+            matched_food = next(
+                (f for f in foods if f["name"].lower() == food_name.lower()), None
+            )
+            if matched_food:
+                item["food"] = {"id": matched_food["id"], "name": matched_food["name"]}
+            else:
+                new_food = await client.create_food(food_name)
+                if new_food:
+                    item["food"] = {"id": new_food["id"], "name": new_food["name"]}
+                else:
+                    # Already exists but not in top results — search wider
+                    wider = (await client.search_foods(food_name, per_page=50)).get("items", [])
+                    food_lower = food_name.lower()
+                    # Also try hyphen-normalized variant (Mealie strips hyphens internally)
+                    food_normalized = food_lower.replace("-", " ")
+                    matched_food = next(
+                        (
+                            f for f in wider
+                            if f["name"].lower() in (food_lower, food_normalized)
+                        ),
+                        None,
+                    )
+                    item["food"] = (
+                        {"id": matched_food["id"], "name": matched_food["name"]}
+                        if matched_food
+                        else None
+                    )
+        else:
+            item["food"] = None
+
+        # Comment / note
+        item["note"] = (ing.get("comment") or "").strip()
+
+        result.append(item)
+
+    return result
+
+
 def register(mcp, get_client):
     """Register recipe tools with the MCP server."""
 
@@ -105,7 +192,7 @@ def register(mcp, get_client):
         total_time: str = "",
         prep_time: str = "",
         perform_time: str = "",
-        ingredients: list[str] | None = None,
+        ingredients: list[dict] | None = None,
         instructions: list[str] | None = None,
         categories: list[str] | None = None,
         tags: list[str] | None = None,
@@ -120,7 +207,11 @@ def register(mcp, get_client):
             total_time: Total time (e.g. "45 minutes")
             prep_time: Prep time
             perform_time: Cook time
-            ingredients: List of ingredient strings (e.g. ["2 cups flour", "1 tsp salt"])
+            ingredients: List of ingredient dicts, each with optional keys:
+                - quantity (float): numeric amount (e.g. 300, 2.5)
+                - unit (str): unit name or abbreviation (e.g. "g", "cup", "tbsp")
+                - food (str): ingredient name (e.g. "bread flour", "butter")
+                - comment (str): extra info shown alongside (e.g. "softened", "about 1¾ tsp")
             instructions: List of instruction steps
             categories: Category names to assign
             tags: Tag names to assign
@@ -142,9 +233,7 @@ def register(mcp, get_client):
             if perform_time:
                 update_data["performTime"] = perform_time
             if ingredients:
-                update_data["recipeIngredient"] = [
-                    {"note": ing, "referenceId": str(uuid.uuid4())} for ing in ingredients
-                ]
+                update_data["recipeIngredient"] = await _resolve_ingredients(client, ingredients)
             if instructions:
                 update_data["recipeInstructions"] = [
                     {"id": str(uuid.uuid4()), "title": "", "summary": "", "text": step, "ingredientReferences": []}
@@ -190,7 +279,7 @@ def register(mcp, get_client):
         total_time: str | None = None,
         prep_time: str | None = None,
         perform_time: str | None = None,
-        ingredients: list[str] | None = None,
+        ingredients: list[dict] | None = None,
         instructions: list[str] | None = None,
         categories: list[str] | None = None,
         tags: list[str] | None = None,
@@ -206,7 +295,11 @@ def register(mcp, get_client):
             total_time: New total time
             prep_time: New prep time
             perform_time: New cook time
-            ingredients: Replace ingredient list
+            ingredients: Replace ingredient list. Each dict has optional keys:
+                - quantity (float): numeric amount (e.g. 300, 2.5)
+                - unit (str): unit name or abbreviation (e.g. "g", "cup", "tbsp")
+                - food (str): ingredient name (e.g. "bread flour", "butter")
+                - comment (str): extra info shown alongside (e.g. "softened", "about 1¾ tsp")
             instructions: Replace instruction steps
             categories: Replace categories
             tags: Replace tags
@@ -229,9 +322,7 @@ def register(mcp, get_client):
             if perform_time is not None:
                 update_data["performTime"] = perform_time
             if ingredients is not None:
-                update_data["recipeIngredient"] = [
-                    {"note": ing, "referenceId": str(uuid.uuid4())} for ing in ingredients
-                ]
+                update_data["recipeIngredient"] = await _resolve_ingredients(client, ingredients)
             if instructions is not None:
                 update_data["recipeInstructions"] = [
                     {"id": str(uuid.uuid4()), "title": "", "summary": "", "text": step, "ingredientReferences": []}

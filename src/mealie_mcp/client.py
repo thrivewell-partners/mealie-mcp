@@ -216,3 +216,13 @@ class MealieClient:
         return await self._request(
             "GET", "/api/units", params={"perPage": -1}
         )
+
+    async def create_food(self, name: str) -> dict | None:
+        """Create a food entry. Returns None if the food already exists (UNIQUE constraint)."""
+        import httpx as _httpx
+        try:
+            return await self._request("POST", "/api/foods", json={"name": name})
+        except _httpx.HTTPStatusError as e:
+            if e.response.status_code == 400:
+                return None  # Food already exists
+            raise
