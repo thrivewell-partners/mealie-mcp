@@ -101,6 +101,7 @@ def register(mcp, get_client):
         name: str,
         description: str = "",
         recipe_yield: str = "",
+        servings: float | None = None,
         total_time: str = "",
         prep_time: str = "",
         perform_time: str = "",
@@ -114,7 +115,8 @@ def register(mcp, get_client):
         Args:
             name: Recipe name
             description: Short description
-            recipe_yield: Servings (e.g. "4 servings")
+            recipe_yield: Yield description (e.g. "15–18 rolls", "1 loaf")
+            servings: Numeric serving count that enables scaling (e.g. 6, 8, 15)
             total_time: Total time (e.g. "45 minutes")
             prep_time: Prep time
             perform_time: Cook time
@@ -131,6 +133,8 @@ def register(mcp, get_client):
                 update_data["description"] = description
             if recipe_yield:
                 update_data["recipeYield"] = recipe_yield
+            if servings is not None:
+                update_data["recipeServings"] = servings
             if total_time:
                 update_data["totalTime"] = total_time
             if prep_time:
@@ -182,6 +186,7 @@ def register(mcp, get_client):
         name: str | None = None,
         description: str | None = None,
         recipe_yield: str | None = None,
+        servings: float | None = None,
         total_time: str | None = None,
         prep_time: str | None = None,
         perform_time: str | None = None,
@@ -196,7 +201,8 @@ def register(mcp, get_client):
             slug: Recipe slug to update
             name: New recipe name
             description: New description
-            recipe_yield: New servings
+            recipe_yield: Yield description (e.g. "15–18 rolls", "1 loaf")
+            servings: Numeric serving count that enables scaling (e.g. 6, 8, 15)
             total_time: New total time
             prep_time: New prep time
             perform_time: New cook time
@@ -214,6 +220,8 @@ def register(mcp, get_client):
                 update_data["description"] = description
             if recipe_yield is not None:
                 update_data["recipeYield"] = recipe_yield
+            if servings is not None:
+                update_data["recipeServings"] = servings
             if total_time is not None:
                 update_data["totalTime"] = total_time
             if prep_time is not None:
