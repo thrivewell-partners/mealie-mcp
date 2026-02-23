@@ -10,3 +10,4 @@ build/
 .ruff_cache/
 .claude/settings.json
 .mcp.json
+docs/
