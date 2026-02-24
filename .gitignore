@@ -9,5 +9,4 @@ build/
 .pytest_cache/
 .ruff_cache/
 .claude/settings.json
-.mcp.json
 docs/

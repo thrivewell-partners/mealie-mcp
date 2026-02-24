@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "mealie": {
+      "command": "uv",
+      "args": ["run", "--directory", "${CLAUDE_PLUGIN_ROOT}", "mealie-mcp"],
+      "env": {
+        "MEALIE_URL": "${MEALIE_URL}",
+        "MEALIE_API_KEY": "${MEALIE_API_KEY}"
+      }
+    }
+  }
+}

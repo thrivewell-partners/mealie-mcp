@@ -1,0 +1,17 @@
+{
+  "description": "Dietary guardrail hooks — scan ingredient lists for pork products and seed oils before saving recipes to Mealie",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__plugin_mealie_mealie__(create_recipe|update_recipe)",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "You are a dietary compliance checker for the Johnson family. Scan the tool_input for the 'ingredients' parameter and check for violations.\n\nFORBIDDEN INGREDIENTS — NO PORK:\nPork, bacon, ham, lard, prosciutto, salami, pepperoni, pork chorizo, pork sausage, ribs, pork chops, pork loin, carnitas, pancetta, guanciale, fatback, pork belly, pork rinds, pulled pork\n\nFORBIDDEN INGREDIENTS — NO SEED OILS:\nVegetable oil, canola oil, sunflower oil, safflower oil, corn oil, soybean oil, cottonseed oil, grapeseed oil, rice bran oil, shortening (if seed-oil based), margarine\n\nCOMPLIANT OIL ALTERNATIVES:\navocado oil, tallow, ghee, butter, olive oil, coconut oil\n\nIf violations found: Output a clear warning message listing each violation and suggest compliant alternatives. Do NOT block the operation — warn Claude so it can decide whether to proceed or correct the recipe.\n\nIf no violations: Output only: 'Dietary check passed.'",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

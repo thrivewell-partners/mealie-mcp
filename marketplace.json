@@ -1,0 +1,24 @@
+{
+  "name": "thrivewell-marketplace",
+  "owner": {
+    "name": "Thrivewell Partners",
+    "url": "https://github.com/thrivewell-partners"
+  },
+  "metadata": {
+    "description": "Mealie recipe management tools for Claude Code — MCP server, cooking skills, dietary management, and meal planning",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "mealie",
+      "source": "./",
+      "description": "Complete Mealie recipe manager with a bundled MCP server (27 tools), family dietary guardrails, Foundation recipe authoring, cooking tips, and meal planning for homesteading families.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Thrivewell Partners",
+        "url": "https://github.com/thrivewell-partners"
+      },
+      "keywords": ["mealie", "recipes", "meal-planning", "cooking", "family", "homesteading", "mcp"]
+    }
+  ]
+}

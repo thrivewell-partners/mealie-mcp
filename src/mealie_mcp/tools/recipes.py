@@ -13,10 +13,24 @@ from ..formatting import (
 )
 
 
+def _build_instruction(step) -> dict:
+    """Convert a step (str or dict) to Mealie recipeInstruction format."""
+    if isinstance(step, str):
+        return {"id": str(uuid.uuid4()), "title": "", "summary": "", "text": step, "ingredientReferences": []}
+    return {
+        "id": str(uuid.uuid4()),
+        "title": step.get("title", ""),
+        "summary": step.get("summary", ""),
+        "text": step.get("text", ""),
+        "ingredientReferences": step.get("ingredient_refs", []),
+    }
+
+
 async def _resolve_ingredients(client: MealieClient, ingredients: list[dict]) -> list[dict]:
     """Convert ingredient dicts to Mealie recipeIngredient format.
 
     Each dict may have:
+        section (str): creates a visual section header (no other fields used)
         quantity (float | None): numeric amount
         unit (str | None): unit name or abbreviation (e.g. "g", "cup", "tbsp")
         food (str | None): ingredient name (e.g. "bread flour", "butter")
@@ -37,6 +51,17 @@ async def _resolve_ingredients(client: MealieClient, ingredients: list[dict]) ->
 
     result = []
     for ing in ingredients:
+        # Section header support — emit a title-only entry
+        if "section" in ing:
+            result.append({
+                "referenceId": str(uuid.uuid4()),
+                "title": ing["section"],
+                "quantity": None,
+                "unit": None,
+                "food": None,
+                "note": None,
+            })
+            continue
         item: dict[str, Any] = {"referenceId": str(uuid.uuid4()), "title": None}
 
         # Quantity
@@ -193,9 +218,11 @@ def register(mcp, get_client):
         prep_time: str = "",
         perform_time: str = "",
         ingredients: list[dict] | None = None,
-        instructions: list[str] | None = None,
+        instructions: list[str | dict] | None = None,
         categories: list[str] | None = None,
         tags: list[str] | None = None,
+        notes: list[dict] | None = None,
+        extras: dict | None = None,
     ) -> str:
         """Create a new recipe manually.
 
@@ -208,13 +235,22 @@ def register(mcp, get_client):
             prep_time: Prep time
             perform_time: Cook time
             ingredients: List of ingredient dicts, each with optional keys:
+                - section (str): creates a visual section header (no other fields used)
                 - quantity (float): numeric amount (e.g. 300, 2.5)
                 - unit (str): unit name or abbreviation (e.g. "g", "cup", "tbsp")
                 - food (str): ingredient name (e.g. "bread flour", "butter")
                 - comment (str): extra info shown alongside (e.g. "softened", "about 1¾ tsp")
-            instructions: List of instruction steps
+            instructions: List of instruction steps — each may be a plain string or a dict with:
+                - text (str): step body
+                - title (str, optional): step heading shown in UI
+                - summary (str, optional): one-line takeaway for cook mode
+                - ingredient_refs (list[str], optional): UUIDs of linked ingredients
             categories: Category names to assign
             tags: Tag names to assign
+            notes: List of note dicts, each with:
+                - title (str): section label (e.g. "Non-Negotiables")
+                - text (str): note body
+            extras: Arbitrary JSON metadata (e.g. {"isFoundation": true})
         """
         client: MealieClient = get_client()
         try:
@@ -235,10 +271,7 @@ def register(mcp, get_client):
             if ingredients:
                 update_data["recipeIngredient"] = await _resolve_ingredients(client, ingredients)
             if instructions:
-                update_data["recipeInstructions"] = [
-                    {"id": str(uuid.uuid4()), "title": "", "summary": "", "text": step, "ingredientReferences": []}
-                    for step in instructions
-                ]
+                update_data["recipeInstructions"] = [_build_instruction(step) for step in instructions]
             if categories:
                 all_cats = (await client.get_categories()).get("items", [])
                 cat_lookup = {c["name"].lower(): c for c in all_cats}
@@ -261,6 +294,10 @@ def register(mcp, get_client):
                     else:
                         resolved_tags.append({"name": t})
                 update_data["tags"] = resolved_tags
+            if notes is not None:
+                update_data["notes"] = [{"title": n.get("title", ""), "text": n.get("text", "")} for n in notes]
+            if extras is not None:
+                update_data["extras"] = extras
 
             if update_data:
                 await client.update_recipe(slug, update_data)
@@ -280,9 +317,11 @@ def register(mcp, get_client):
         prep_time: str | None = None,
         perform_time: str | None = None,
         ingredients: list[dict] | None = None,
-        instructions: list[str] | None = None,
+        instructions: list[str | dict] | None = None,
         categories: list[str] | None = None,
         tags: list[str] | None = None,
+        notes: list[dict] | None = None,
+        extras: dict | None = None,
     ) -> str:
         """Update fields on an existing recipe. Only provided fields are changed.
 
@@ -296,13 +335,22 @@ def register(mcp, get_client):
             prep_time: New prep time
             perform_time: New cook time
             ingredients: Replace ingredient list. Each dict has optional keys:
+                - section (str): creates a visual section header (no other fields used)
                 - quantity (float): numeric amount (e.g. 300, 2.5)
                 - unit (str): unit name or abbreviation (e.g. "g", "cup", "tbsp")
                 - food (str): ingredient name (e.g. "bread flour", "butter")
                 - comment (str): extra info shown alongside (e.g. "softened", "about 1¾ tsp")
-            instructions: Replace instruction steps
+            instructions: Replace instruction steps — each may be a plain string or a dict with:
+                - text (str): step body
+                - title (str, optional): step heading shown in UI
+                - summary (str, optional): one-line takeaway for cook mode
+                - ingredient_refs (list[str], optional): UUIDs of linked ingredients
             categories: Replace categories
             tags: Replace tags
+            notes: Replace note blocks. Each dict has:
+                - title (str): section label (e.g. "Non-Negotiables")
+                - text (str): note body
+            extras: Replace arbitrary JSON metadata (e.g. {"isFoundation": true})
         """
         client: MealieClient = get_client()
         try:
@@ -324,10 +372,7 @@ def register(mcp, get_client):
             if ingredients is not None:
                 update_data["recipeIngredient"] = await _resolve_ingredients(client, ingredients)
             if instructions is not None:
-                update_data["recipeInstructions"] = [
-                    {"id": str(uuid.uuid4()), "title": "", "summary": "", "text": step, "ingredientReferences": []}
-                    for step in instructions
-                ]
+                update_data["recipeInstructions"] = [_build_instruction(step) for step in instructions]
             if categories is not None:
                 all_cats = (await client.get_categories()).get("items", [])
                 cat_lookup = {c["name"].lower(): c for c in all_cats}
@@ -350,6 +395,10 @@ def register(mcp, get_client):
                     else:
                         resolved_tags.append({"name": t})
                 update_data["tags"] = resolved_tags
+            if notes is not None:
+                update_data["notes"] = [{"title": n.get("title", ""), "text": n.get("text", "")} for n in notes]
+            if extras is not None:
+                update_data["extras"] = extras
 
             if not update_data:
                 return "No fields to update. Provide at least one field to change."

@@ -53,14 +53,29 @@ def format_recipe_detail(recipe: dict) -> str:
     if ingredients:
         lines.append("\n## Ingredients")
         for ing in ingredients:
-            lines.append(f"- {_format_ingredient(ing)}")
+            if isinstance(ing, dict) and ing.get("title") and not ing.get("food") and not ing.get("note") and not ing.get("quantity"):
+                lines.append(f"\n### {ing['title']}")
+            else:
+                lines.append(f"- {_format_ingredient(ing)}")
 
     instructions = recipe.get("recipeInstructions") or []
     if instructions:
         lines.append("\n## Instructions")
         for i, step in enumerate(instructions, 1):
-            text = step.get("text", "") if isinstance(step, dict) else str(step)
-            lines.append(f"{i}. {text}")
+            if isinstance(step, dict):
+                title = step.get("title", "")
+                text = step.get("text", "")
+                summary = step.get("summary", "")
+                if title:
+                    lines.append(f"{i}. **{title}**")
+                    if summary:
+                        lines.append(f"   *{summary}*")
+                    if text:
+                        lines.append(f"   {text}")
+                else:
+                    lines.append(f"{i}. {text}")
+            else:
+                lines.append(f"{i}. {str(step)}")
 
     nutrition = recipe.get("nutrition") or {}
     nutrition_items = {
@@ -75,8 +90,15 @@ def format_recipe_detail(recipe: dict) -> str:
     if notes:
         lines.append("\n## Notes")
         for note in notes:
-            text = note.get("text", "") if isinstance(note, dict) else str(note)
-            lines.append(f"- {text}")
+            if isinstance(note, dict):
+                title = note.get("title", "")
+                text = note.get("text", "")
+                if title:
+                    lines.append(f"\n### {title}")
+                if text:
+                    lines.append(text)
+            else:
+                lines.append(f"- {str(note)}")
 
     return "\n".join(lines)
 
@@ -86,7 +108,10 @@ def format_ingredient_list(recipe: dict) -> str:
     lines = [f"## Ingredients for {recipe.get('name', 'Untitled')}"]
     lines.append(f"Slug: `{recipe.get('slug', '')}`")
     for ing in recipe.get("recipeIngredient", []):
-        lines.append(f"- {_format_ingredient(ing)}")
+        if isinstance(ing, dict) and ing.get("title") and not ing.get("food") and not ing.get("note") and not ing.get("quantity"):
+            lines.append(f"\n### {ing['title']}")
+        else:
+            lines.append(f"- {_format_ingredient(ing)}")
     return "\n".join(lines)
 
 

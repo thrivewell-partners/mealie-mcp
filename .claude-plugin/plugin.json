@@ -1,0 +1,15 @@
+{
+  "name": "mealie",
+  "version": "1.0.0",
+  "description": "Mealie recipe manager with MCP server integration, family dietary management, cooking guidance, and meal planning for homesteading families",
+  "author": {
+    "name": "Thrivewell Partners",
+    "url": "https://github.com/thrivewell-partners"
+  },
+  "homepage": "https://github.com/thrivewell-partners/mealie-mcp",
+  "repository": "https://github.com/thrivewell-partners/mealie-mcp",
+  "license": "MIT",
+  "keywords": ["mealie", "recipes", "meal-planning", "cooking", "family", "homesteading", "mcp"],
+  "hooks": "./hooks/hooks.json",
+  "mcpServers": "./.mcp.json"
+}
